@@ -1,2 +1,2 @@
 # SWID-COM-23
-Single-well Injection-drift Command Line 2023
+Finite-difference model for simulating solute transport during a single-well injection-drift test
