@@ -1,0 +1,118 @@
+SWID-COM-23 uses an explicit, forward in time, upstream in space, finite difference numerical method to solve the advection, dispersion (mechanical), and reaction (linear equilibrium sorption and first order decay) equations for the forced-gradient injection phase (stress period 1) and the natural-gradient drift phase (stress period 2) of a single-well injection-drift test conducted in a homogeneous, isotropic, and confined aquifer. The numerical method is similar to the MT3DMS Group C solutions in Table 1 on page 36 in Zheng & Weng (1999). Below is description of the computer model.
+
+VARIABLES:
+C=concentration [M/L^3]
+r=radius [L]
+t=time [T]
+x=distance [L]
+
+CONSTANTS:
+delr=change in radius [L]
+delt=change in time [T]
+delx=change in distance [L]
+Qi=injection flow rate [L^3/T]
+ti=injection time [T]
+b=aquifer thickness [L]
+theta=porosity [-]
+Ci=injection concentration [M/L^3]
+Ca=aquifer conentration [M/L^3]
+vr=radial velocity [L/T]
+Dr=radial dispersion [L^2]
+alphar=radial mechanical dispersivity [L]
+R=retention factor [-]
+k=decay rate [1/T]
+K=hydrualic conductivity [L/T]
+i=hydrualic gradient [-]
+vx=horizontal velocity [L/T]
+Dx=horizontal dispersion [L^2]
+alphax=horizontal mechanical dispersivity [L]
+Mo=internal mass at time n [M]
+Mt=internal mass at time n+1 [M]
+So=external source mass at inlet [M]
+Si=external sink mass at outlet [M]
+Z=external sink mass at interior [M]
+Mb=cumulative percent mass discrepancy [-]
+
+INDICES:
+[j]=space
+[n]=time
+
+GOVERNING TRANSPORT EQUATIONS:
+Stress period 1: forced-gradient radial transport
+Partial differential equation: R*dC/dt=Dr*d^2C/dr^2-vr*dC/dr+kC
+	where: Dr=alphar*vr
+Finite difference advection term: vr*dC/dr=(v[j]+v[j-1])/2*(C[j,n]-C[j-1,n])/delr=A
+	where: v[j]=Q/(2*pi*r[j]*b*theta)
+Finite difference dispersion term: alphar*vr*d^2C/dr^2=alphar*(((v[j+1]+v[j])/2*(C[j+1,n]-C[j,n])/delr)-((v[j]+v[j-1])/2*(C[j,n]-C[j-1,n])/delr))/delr=AA
+Finite difference temporal term with linear equilibrium sorption: R*dC/dt=R*(C[j,n+1]-C[j,n])/delt
+Finite difference first order decay term: k*C[j,n]
+Solution: C[r,n+1]=(AA-A+kC[j,n])*delt/R+C[j,n]
+	
+Stress period 2: natural-gradient horizontal transport
+Partial differential equation: RdC/dt=Dx*d^2C/dx^2-vx*dC/dx+kC
+	where: Dx=alphax*vx
+Finite difference advection term: vx*dC/dx=vx*(C[j,n]-C[j-1,n])/delx=A
+	where: vx=-Ki/theta	
+Finite difference dispersion term: alphax*vx*d^2C/dx^2=alphax*vx(C[j+1,n]-2*C[j,n]+C[j-1,n])/delx^2=AA
+Finite difference temporal term with linear equilibrium sorption: R*dC/dt=R*(C[j,n+1]-C[j,n])/delt
+Finite difference first order decay term: k*C[j,n]
+Solution: C[r,n+1]=(AA-A+kC[j,n])*delt/R+C[j,n]
+
+INITIAL AND BOUNDARY CONDITIONS:
+Stress period 1: forced-gradient radial transport
+C(r,t=0)=Ca
+C(r->0,0<t<=ti)=Ci
+C(r->inf,t>0)=Ca
+
+Stress period 2: natural-gradient horizontal transport
+C(x,t=0)=C(r,t=ti)
+C(x->+inf,t>0)=Ca
+C(x->-inf,t>0)=Ca
+
+KEY ASSUMPTIONS:
+1) homogeneous
+2) isotropic
+3) confined
+4) fully penetrating well
+5) initial uniform aquifer concentration
+6) non-uniform (cylindrical) steady-state velocity during forced-gradient injection phase (stress period 1)
+7) natural-gradient velocity is negligable during forced-gradient injection phase (stress period 1)
+8) molecular diffusion is negligable
+9) equivalent radial and horizontal mechanical dispersivity
+10) uniform (horizontal) steady-state velocity during natural-gradient drift phase (stress period 2)
+11) forced-gradient velocity is negligable during natural-gradient drift phase (stress period 2)
+
+SPATIAL AND TEMPORAL DISCRETIZATION:
+Stress period 1: forced-gradient radial transport
+delt=10^-5 (days)
+delr=1/12 (foot)
+r=25 (feet)
+
+Stress period 2: natural-gradient horizontal transport
+delt=10^-3 (days)
+delx=1/12 (foot)
+x=50 (feet)
+
+CONDITIONAL STABILIZATION THRESHOLDS:
+Peclet: Pe<((Q/(2*pi*delr*b*theta))*delr)/((Q/(2*pi*delr*b*theta))*alphar)
+Radius of influence: 0.5ft<r<10ft where: r=((Qi*ti)/(pi*b*theta))^(1./2.)
+Advection: delt<=R/(vr/delr) or delt<=R/(vx/delx)
+Dispersion: delt<=(0.5*R)/(alphar*vr/delr^2) or delt<=(0.5*R)/(alphax*vx/delx^2)
+Decay: delt<=1/|k|
+
+GOVERNING MASS BUDGET EQUATIONS:
+Mb=[(Mo+So)-(Mt+Si+Z)]/(0.5*[(Mo+So)-(Mt+Si+Z)])x100
+
+Stress period 1: forced-gradient radial transport
+Mo=sum from r[2] to r[jth-2] of (C[j,n]+C[j+1,n])/2*(r[j+1]^2-r[j]^2)*pi*b*theta*R
+So=(vr[1]+vr[2])/2*(r[1]+r[2])/2*2*pi*b*theta*(C[1,n]+C[2,n]+C[1,n+1]+C[2,n+1])/4*delt
+Mt=sum from r[2] to [jth-2] of (C[j,n+1]+C[j+1,n+1])/2*(r[j+1]^2-r[j]^2)*pi*b*theta*R
+Si=(vr[jth]+vr[jth-1])/2*(r[jth]+r[jth-1])/2*2*pi*b*theta*(C[jth,n]+C[jth-1,n]+C[jth,n+1]+C[jth-1,n+1])/4*delt
+Z=sum from r[2] to r[jth-2] of ((C[j,n]+C[j+1,n])/2*(r[j+1]^2-r[j]^2)-(C[j,n]+C[j+1,n])/2*(r[j+1]^2-r[j]^2)*exp(-k*delt))*pi*b*theta
+
+Stress period 2: natural-gradient horizontal transport
+Mo=sum from x[2] to x[jth-2] of (C[j,n]+C[j+1,n])/2*delx^2*b*theta*R
+So=vx[1]*delx^2*b*theta*(C[1,n]+C[2,n]+C[1,n+1]+C[2,n+1])/4*delt
+Mt=sum from x[2] to x[jth-2] of (C[j,n+1]+C[j+1,n+1])/2*delx^2*b*theta*R
+Si=vx[jth]*delx^2*b*theta*(C[jth,n]+C[jth-1,n]+C[jth,n+1]+C[jth-1,n+1])/4*delt
+Z=sum from x[2] to x[jth-2] of ((C[j,n]+C[j+1,n])/2-(C[j,n]+C[j+1,n])/2)*exp(-k*delt))*delx^2*b*theta
